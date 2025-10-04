@@ -19,9 +19,9 @@ const languageMap: { [key: string]: string } = {
 const getSystemInstruction = (languageCode: string) => {
     const languageName = languageMap[languageCode] || 'Português do Brasil';
     if (languageCode === 'en-US') {
-        return `You are an expert theologian and a deep scholar of the Holy Bible. Your mission is to create inspiring, accurate, and theologically sound content. Your responses should always be in American English, well-structured, and with language that honors the source material.`;
+        return `You are an expert theologian and a deep scholar of the Holy Bible. Your mission is to create inspiring, accurate, and theologically sound content. Your responses should always be in American English, well-structured, and with language that honors the source material. You MUST NOT invent characters, events, or dialogues that are not in the biblical text.`;
     }
-    return `Você é um teólogo especialista e profundo conhecedor da Bíblia Sagrada. Sua missão é criar conteúdo inspirador, preciso e teologicamente sólido. Suas respostas devem ser sempre em ${languageName}, bem estruturadas e com uma linguagem que honre o material de origem.`;
+    return `Você é um teólogo especialista e profundo conhecedor da Bíblia Sagrada. Sua missão é criar conteúdo inspirador, preciso e teologicamente sólido. Suas respostas devem ser sempre em ${languageName}, bem estruturadas e com uma linguagem que honre o material de origem. Você NÃO DEVE inventar personagens, eventos ou diálogos que não estejam no texto bíblico.`;
 };
 
 
@@ -80,8 +80,16 @@ async function generateJsonWithGemini(apiKey: string, prompt: string, language: 
 
 export async function enhanceStoryPrompt(params: GenerationParams, apiKey: string): Promise<string> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
-    const prompt = `Aja como um roteirista e teólogo criativo. Recebi a seguinte ideia para uma história bíblica: "${params.mainPrompt}".
-Aprimore esta ideia em um prompt mais rico e detalhado, sugerindo um arco de personagem, conflitos, detalhes de cenário e um clímax.
+    const prompt = `Aja como um roteirista e teólogo criativo. Sua tarefa é aprimorar uma ideia para uma história bíblica, mantendo-se estritamente fiel ao texto bíblico original.
+Ideia original: "${params.mainPrompt}".
+
+Sua tarefa é expandir esta ideia em um prompt mais rico e detalhado. Você pode sugerir:
+- Foco em emoções e pensamentos dos personagens REAIS da passagem.
+- Detalhes do cenário e da atmosfera baseados em conhecimentos históricos e bíblicos.
+- Um clímax que intensifique o momento central da passagem.
+
+**REGRA CRÍTICA E ABSOLUTA: Não invente personagens, diálogos ou eventos que não estejam explicitamente ou implicitamente na passagem bíblica. A fidelidade ao texto sagrado é a prioridade máxima.**
+
 O resultado deve ser um novo parágrafo único que sirva como um prompt aprimorado.
 Retorne APENAS o texto do prompt aprimorado, no idioma ${languageName}.`;
     return generateWithGemini(apiKey, prompt, params.language);
@@ -166,20 +174,22 @@ export async function generateContent(params: GenerationParams, apiKey: string, 
     const { creationType, mainPrompt, characterCount, language } = params;
     const languageName = languageMap[language] || 'Português do Brasil';
     
-    const prompt = `Sua tarefa tem quatro regras ABSOLUTAS e OBRIGATÓRIAS.
+    const prompt = `Sua tarefa tem cinco regras ABSOLUTAS e OBRIGATÓRIAS.
 
 REGRA 0 (IDIOMA): A resposta DEVE ser escrita inteiramente em ${languageName}.
 
-REGRA 1 (ESTRUTURA): O texto deve ter uma estrutura clara de início, meio e fim.
+REGRA 1 (FIDELIDADE BÍBLICA): Ao criar uma história, você DEVE se manter estritamente fiel à passagem bíblica. Detalhe a narrativa, explore as emoções e o contexto, mas **NÃO INVENTE personagens, diálogos ou eventos que não constam no texto sagrado.** A precisão teológica e a fidelidade ao material de origem são primordiais.
+
+REGRA 2 (ESTRUTURA): O texto deve ter uma estrutura clara de início, meio e fim.
 - Para uma história: apresentação, desenvolvimento/conflito e resolução.
 - Para uma oração: introdução, corpo da petição e conclusão.
 
-REGRA 2 (CONTAGEM DE CARACTERES): O resultado final DEVE ter entre ${characterCount - 100} e ${characterCount + 100} caracteres. Esta é uma regra crítica. Sacrifique detalhes se necessário para CUMPRIR esta regra.
+REGRA 3 (CONTAGEM DE CARACTERES): O resultado final DEVE ter entre ${characterCount - 100} e ${characterCount + 100} caracteres. Esta é uma regra crítica. Sacrifique detalhes se necessário para CUMPRIR esta regra.
 
-REGRA 3 (FORMATO DA RESPOSTA): A resposta deve conter APENAS o texto da ${creationType === CreationType.Story ? 'história' : 'oração'}. Não inclua nenhum texto extra.
+REGRA 4 (FORMATO DA RESPOSTA): A resposta deve conter APENAS o texto da ${creationType === CreationType.Story ? 'história' : 'oração'}. Não inclua nenhum texto extra.
 
-Após confirmar que entendeu e irá seguir estas quatro regras, crie uma ${creationType === CreationType.Story ? 'história bíblica' : 'oração'} com base no tema: "${mainPrompt}".
-${modification ? `\n\nInstrução de modificação: "${modification}". Aplique-a, mas SEMPRE respeitando as REGRAS 0, 1, 2 e 3.` : ''}
+Após confirmar que entendeu e irá seguir estas cinco regras, crie uma ${creationType === CreationType.Story ? 'história bíblica' : 'oração'} com base no tema: "${mainPrompt}".
+${modification ? `\n\nInstrução de modificação: "${modification}". Aplique-a, mas SEMPRE respeitando TODAS as regras.` : ''}
 Formate com parágrafos.`;
     
     let generatedText = await generateWithGemini(apiKey, prompt, language, { temperature: 0.4 });
