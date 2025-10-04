@@ -146,18 +146,20 @@ export async function generateTags(params: GenerationParams, apiKey: string, mod
 export async function generateThumbnailPrompt(params: GenerationParams, generatedContent: string, apiKey: string, modification?: string): Promise<string> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
     const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
-    let prompt = `Crie um prompt detalhado, escrito inteiramente EM INGLÊS, para uma IA de geração de imagem. O objetivo é gerar uma thumbnail para uma ${typeText} sobre "${params.mainPrompt}". O conteúdo principal é: "${generatedContent.substring(0, 300)}...".\n\n`;
+    let prompt = `Your task is to create a detailed prompt, written entirely IN ENGLISH, for an image generation AI. This prompt will be used to generate a thumbnail for a ${typeText} about "${params.mainPrompt}". The story/prayer content begins with: "${generatedContent.substring(0, 300)}...".\n\n`;
     
-    prompt += `O prompt em INGLÊS deve incluir:\n`
-    prompt += `1. Descrição da cena, estilo artístico, iluminação e composição.\n`;
-    prompt += `2. Uma instrução específica para um TEXTO a ser sobreposto na imagem. Este texto deve ser escrito EM ${languageName}. O texto deve ser curto, impactante e despertar curiosidade. Exemplo de instrução: "Text overlay in ${languageName}: 'O texto de exemplo aqui'".\n`;
-
-    if (params.thumbnailPrompt) prompt += `\nConsidere a preferência do usuário para o estilo: "${params.thumbnailPrompt}".`;
-    if (modification) prompt += `\nModifique o prompt com a seguinte instrução: "${modification}".`;
+    prompt += `The final ENGLISH prompt you generate must follow two CRITICAL rules:\n\n`;
     
-    prompt += "\nRetorne apenas o texto do prompt final para a IA de imagem.";
+    prompt += `RULE 1: VISUAL DESCRIPTION. You must describe a compelling scene with details about the artistic style, lighting, and composition.\n`;
+    
+    prompt += `RULE 2: TEXT INTEGRATION. This is the most important rule. You MUST invent a short, powerful, and curiosity-arousing text phrase (3 to 5 words long) in the ${languageName} language, relevant to the content. Then, you MUST include an explicit instruction in your prompt to render this EXACT text phrase onto the image. The instruction for the text must be very clear and direct. For example: "The text '${"UM EXEMPLO EM " + languageName}' should be emblazoned across the image in a cinematic, golden font." or "Featuring the words '${"OUTRO EXEMPLO EM " + languageName}' in a gritty, hand-written style at the bottom."\n\n`;
 
-    return generateWithGemini(apiKey, prompt, 'en-US'); // The prompt itself is generated in English for consistency
+    if (params.thumbnailPrompt) prompt += `The user has provided a style preference to consider: "${params.thumbnailPrompt}".\n`;
+    if (modification) prompt += `Apply this modification to your generation: "${modification}".\n`;
+    
+    prompt += "\nNow, generate ONLY the final text prompt for the image AI, following all rules. Do not add any conversational text or explanations before or after the prompt.";
+
+    return generateWithGemini(apiKey, prompt, 'en-US');
 }
 
 export async function generateContent(params: GenerationParams, apiKey: string, modification?: string): Promise<string> {
