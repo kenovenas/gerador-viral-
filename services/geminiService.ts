@@ -178,15 +178,20 @@ export async function generateContent(params: GenerationParams, apiKey: string, 
 
 REGRA 0 (IDIOMA): A resposta DEVE ser escrita inteiramente em ${languageName}.
 
-REGRA 1 (FIDELIDADE BÍBLICA): Ao criar uma história, você DEVE se manter estritamente fiel à passagem bíblica. Detalhe a narrativa, explore as emoções e o contexto, mas **NÃO INVENTE personagens, diálogos ou eventos que não constam no texto sagrado.** A precisão teológica e a fidelidade ao material de origem são primordiais.
+REGRA 1 (FIDELIDADE BÍBLICA E EXPANSÃO NARRATIVA): Sua principal diretriz é a fidelidade bíblica. Ao criar uma história, você deve expandir a narrativa, mas fazendo isso EXCLUSIVAMENTE através de:
+- **Detalhes Descritivos:** Descreva o cenário, as vestimentas, a atmosfera baseando-se no contexto histórico e geográfico da passagem.
+- **Monólogo Interior:** Explore os possíveis pensamentos, emoções, medos e esperanças dos personagens BÍBLICOS, inferindo-os a partir de suas ações e do contexto da Escritura.
+- **Ações Detalhadas:** Transforme uma ação simples (ex: 'ele caminhou') em uma descrição mais rica e vívida (ex: 'ele caminhou com passos firmes sobre a poeira da estrada, o sol forte em seu rosto...').
+- **Linguagem Sensorial:** Descreva o que os personagens veem, ouvem, cheiram e sentem.
+- **CRUCIALMENTE: NÃO INVENTE novos personagens, diálogos falados que não estão no texto, ou eventos que contradigam a passagem.** A precisão teológica é primordial.
 
 REGRA 2 (ESTRUTURA): O texto deve ter uma estrutura clara de início, meio e fim.
 - Para uma história: apresentação, desenvolvimento/conflito e resolução.
 - Para uma oração: introdução, corpo da petição e conclusão.
 
-REGRA 3 (CONTAGEM DE CARACTERES): O resultado final DEVE ter entre ${characterCount - 100} e ${characterCount + 100} caracteres. Esta é uma regra crítica. Sacrifique detalhes se necessário para CUMPRIR esta regra.
+REGRA 3 (CONTAGEM DE CARACTERES): O resultado final DEVE ter aproximadamente ${characterCount} caracteres (com uma tolerância de +/- 100 caracteres). Esta é uma regra tão importante quanto a fidelidade bíblica. Use a liberdade criativa descrita na REGRA 1 para expandir a narrativa e ATINGIR a contagem de caracteres solicitada. É essencial que o texto tenha o comprimento adequado.
 
-REGRA 4 (FORMATO DA RESPOSTA): A resposta deve conter APENAS o texto da ${creationType === CreationType.Story ? 'história' : 'oração'}. Não inclua nenhum texto extra.
+REGRA 4 (FORMATO DA RESPOSTA): A resposta deve conter APENAS o texto da ${creationType === CreationType.Story ? 'história' : 'oração'}. Não inclua nenhum texto extra, como títulos ou introduções.
 
 Após confirmar que entendeu e irá seguir estas cinco regras, crie uma ${creationType === CreationType.Story ? 'história bíblica' : 'oração'} com base no tema: "${mainPrompt}".
 ${modification ? `\n\nInstrução de modificação: "${modification}". Aplique-a, mas SEMPRE respeitando TODAS as regras.` : ''}
@@ -194,10 +199,11 @@ Formate com parágrafos.`;
     
     let generatedText = await generateWithGemini(apiKey, prompt, language, { temperature: 0.4 });
 
+    // This logic is a safety net. If the AI still generates text that is too long, we truncate it gracefully.
     if (generatedText.length > characterCount + 100) {
         const hardLimit = characterCount + 100;
         let cutIndex = generatedText.lastIndexOf('.', hardLimit);
-        if (cutIndex === -1 || cutIndex < hardLimit - 100) {
+        if (cutIndex === -1 || cutIndex < hardLimit - 50) { // Look for a period in a reasonable range
             cutIndex = generatedText.lastIndexOf(' ', hardLimit);
         }
         if (cutIndex === -1) {
