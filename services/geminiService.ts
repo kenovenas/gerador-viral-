@@ -99,7 +99,7 @@ Retorne APENAS o texto do prompt aprimorado, no idioma ${languageName}.`;
 export async function generateTitles(params: GenerationParams, apiKey: string, modification?: string): Promise<string[]> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
     const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
-    let prompt = `Baseado na seguinte ideia: "${params.mainPrompt}", gere 5 sugestões de títulos cativantes para uma ${typeText}.`;
+    let prompt = `Baseado na seguinte ideia: "${params.mainPrompt}", gere 5 sugestões de títulos otimizados para SEO no YouTube. Os títulos devem ser cativantes, gerar curiosidade e incluir palavras-chave relevantes para aumentar a visibilidade e a taxa de cliques (CTR) para uma ${typeText}.`;
     if (params.titlePrompt) prompt += ` Leve em consideração: "${params.titlePrompt}".`;
     if (modification) prompt += ` Modifique com a seguinte instrução: "${modification}".`;
     prompt += ` Gere os títulos no idioma ${languageName}. Responda com um array JSON de strings.`;
@@ -122,17 +122,17 @@ export async function generateTitles(params: GenerationParams, apiKey: string, m
 export async function generateDescription(params: GenerationParams, apiKey: string, modification?: string): Promise<string> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
     const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
-    let prompt = `Baseado na seguinte ideia: "${params.mainPrompt}", escreva uma descrição envolvente para uma ${typeText}.`;
+    let prompt = `Baseado na seguinte ideia: "${params.mainPrompt}", escreva uma descrição otimizada para SEO de um vídeo no YouTube sobre uma ${typeText}. A descrição deve ser envolvente, rica em palavras-chave relevantes e estruturada para maximizar a descoberta e o engajamento na plataforma.`;
     if (params.descriptionPrompt) prompt += ` Leve em consideração: "${params.descriptionPrompt}".`;
     if (modification) prompt += ` Modifique com a seguinte instrução: "${modification}".`;
-    prompt += ` A descrição deve ter cerca de 2-3 frases. Escreva a resposta no idioma ${languageName}. Retorne apenas o texto da descrição.`;
+    prompt += ` Escreva a resposta no idioma ${languageName}. Retorne apenas o texto da descrição, pronta para ser copiada e colada no YouTube.`;
     return generateWithGemini(apiKey, prompt, params.language);
 }
 
 export async function generateTags(params: GenerationParams, apiKey: string, modification?: string): Promise<string[]> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
     const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
-    let prompt = `Para uma ${typeText} com o tema "${params.mainPrompt}", gere uma lista de 10 a 15 tags de SEO otimizadas.`;
+    let prompt = `Para um vídeo do YouTube sobre uma ${typeText} com o tema "${params.mainPrompt}", gere uma lista de tags de SEO altamente relevantes. A tarefa tem uma regra crítica: a soma total de caracteres de todas as tags geradas deve estar entre 450 e 500 caracteres, para maximizar o aproveitamento do limite do YouTube. Inclua uma mistura de tags específicas (cauda longa) e genéricas (cauda curta) que os usuários provavelmente pesquisariam. Otimize para relevância e densidade de palavras-chave.`;
     if (modification) prompt += ` Modifique com a seguinte instrução: "${modification}".`;
     prompt += ` As tags devem ser relevantes e no idioma ${languageName}. Responda com um array JSON de strings.`;
     
@@ -154,13 +154,13 @@ export async function generateTags(params: GenerationParams, apiKey: string, mod
 export async function generateThumbnailPrompt(params: GenerationParams, generatedContent: string, apiKey: string, modification?: string): Promise<string> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
     const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
-    let prompt = `Your task is to create a detailed prompt, written entirely IN ENGLISH, for an image generation AI. This prompt will be used to generate a thumbnail for a ${typeText} about "${params.mainPrompt}". The story/prayer content begins with: "${generatedContent.substring(0, 300)}...".\n\n`;
+    let prompt = `Your task is to create a detailed prompt, written entirely IN ENGLISH, for an image generation AI. This prompt will be used to generate a thumbnail for a YouTube video about a ${typeText} about "${params.mainPrompt}". The thumbnail must be optimized for YouTube: high-contrast, emotionally engaging, and designed to maximize click-through rate (CTR). The story/prayer content begins with: "${generatedContent.substring(0, 300)}...".\n\n`;
     
     prompt += `The final ENGLISH prompt you generate must follow two CRITICAL rules:\n\n`;
     
-    prompt += `RULE 1: VISUAL DESCRIPTION. You must describe a compelling scene with details about the artistic style, lighting, and composition.\n`;
+    prompt += `RULE 1: VISUAL DESCRIPTION. You must describe a compelling, high-contrast scene with details about the artistic style, dramatic lighting, and clear composition, focusing on emotionally resonant subjects suitable for a YouTube thumbnail.\n`;
     
-    prompt += `RULE 2: TEXT INTEGRATION. This is the most important rule. You MUST invent a short, powerful, and curiosity-arousing text phrase (3 to 5 words long) in the ${languageName} language, relevant to the content. Then, you MUST include an explicit instruction in your prompt to render this EXACT text phrase onto the image. The instruction for the text must be very clear and direct. For example: "The text '${"UM EXEMPLO EM " + languageName}' should be emblazoned across the image in a cinematic, golden font." or "Featuring the words '${"OUTRO EXEMPLO EM " + languageName}' in a gritty, hand-written style at the bottom."\n\n`;
+    prompt += `RULE 2: TEXT INTEGRATION. This is the most important rule. You MUST invent a short, powerful, and curiosity-arousing text phrase (3 to 5 words long) in the ${languageName} language, relevant to the content. This text must be easily readable on small screens. Then, you MUST include an explicit instruction in your prompt to render this EXACT text phrase onto the image using a bold, clear font. The instruction for the text must be very clear and direct. For example: "The text '${"UM EXEMPLO EM " + languageName}' should be emblazoned across the image in a cinematic, golden, and highly readable font." or "Featuring the words '${"OUTRO EXEMPLO EM " + languageName}' in a gritty, hand-written style at the bottom that is still easy to read."\n\n`;
 
     if (params.thumbnailPrompt) prompt += `The user has provided a style preference to consider: "${params.thumbnailPrompt}".\n`;
     if (modification) prompt += `Apply this modification to your generation: "${modification}".\n`;
@@ -218,10 +218,10 @@ Formate com parágrafos.`;
 export async function generateCta(params: GenerationParams, apiKey: string, modification?: string): Promise<string> {
     const languageName = languageMap[params.language] || 'Português do Brasil';
     const typeText = params.creationType === CreationType.Story ? 'história' : 'oração';
-    let prompt = `Baseado no tema "${params.mainPrompt}" para uma ${typeText}, crie uma "call to action" (CTA) concisa para o final de um vídeo no YouTube.`;
+    let prompt = `Baseado no tema "${params.mainPrompt}" para uma ${typeText}, crie uma "call to action" (CTA) persuasiva e otimizada para o engajamento no YouTube. A CTA deve incentivar o espectador a se inscrever no canal, ativar as notificações, curtir o vídeo e deixar um comentário com suas reflexões. Seja criativo e pessoal.`;
     if (modification) {
         prompt += ` Modifique com a instrução: "${modification}".`;
     }
-    prompt += ` A CTA deve incentivar o espectador a se inscrever, curtir e comentar. Seja criativo. Escreva a resposta no idioma ${languageName}. Retorne apenas o texto da CTA.`;
+    prompt += ` Escreva a resposta no idioma ${languageName}. Retorne apenas o texto da CTA.`;
     return generateWithGemini(apiKey, prompt, params.language);
 }
