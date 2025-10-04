@@ -6,7 +6,7 @@ import Selector from './components/Selector';
 import TextAreaInput from './components/TextAreaInput';
 import ResultCard from './components/ResultCard';
 import LoadingSpinner from './components/LoadingSpinner';
-import { BookOpenIcon, SparklesIcon, PencilIcon, TagIcon, ImageIcon, PrayingHandsIcon, DocumentTextIcon, MegaphoneIcon, ClipboardIcon, ClipboardCheckIcon } from './components/Icons';
+import { BookOpenIcon, SparklesIcon, PencilIcon, TagIcon, ImageIcon, PrayingHandsIcon, DocumentTextIcon, MegaphoneIcon, ClipboardIcon, ClipboardCheckIcon, TrashIcon } from './components/Icons';
 
 type RegenerationField = 'titles' | 'description' | 'tags' | 'thumbnail' | 'content' | 'cta';
 
@@ -108,6 +108,21 @@ const App: React.FC = () => {
             setIsEnhancing(false);
         }
     }, [mainPrompt, getGenerationParams, userApiKey]);
+    
+    const clearProject = () => {
+        setMainPrompt('');
+        setTitlePrompt('');
+        setDescriptionPrompt('');
+        setThumbnailPrompt('');
+        setGeneratedTitles([]);
+        setGeneratedDescription('');
+        setGeneratedTags([]);
+        setGeneratedThumbnailPrompt('');
+        setGeneratedContent('');
+        setGeneratedContentCharCount(0);
+        setGeneratedCta('');
+        setError(null);
+    };
     
     const handleGenerateAll = async () => {
         if (!validateApiKey() || !mainPrompt) {
@@ -356,9 +371,15 @@ const App: React.FC = () => {
                         <TextAreaInput label="Desejo para a Thumbnail" value={thumbnailPrompt} onChange={(e) => setThumbnailPrompt(e.target.value)} placeholder="Ex: Estilo de pintura a óleo, com iluminação dramática." rows={2}/>
                     </div>
 
-                    <button onClick={handleGenerateAll} disabled={isLoading} className="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg">
-                        {isLoading ? <LoadingSpinner /> : 'Gerar Conteúdo'}
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={handleGenerateAll} disabled={isLoading} className="flex-grow bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg">
+                            {isLoading ? <LoadingSpinner /> : 'Gerar Conteúdo'}
+                        </button>
+                         <button onClick={clearProject} disabled={isLoading} title="Limpar Projeto" className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center">
+                            <TrashIcon className="h-6 w-6"/>
+                        </button>
+                    </div>
+                    
                     {isGenerating && generationStatus && (
                         <p className="text-amber-300 mt-2 text-center animate-pulse">{generationStatus}</p>
                     )}
