@@ -1,0 +1,209 @@
+import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { CreationType, GenerationParams } from "../types";
+
+const getAiClient = (apiKey: string): GoogleGenAI => {
+    if (!apiKey) {
+        throw new Error("API Key não fornecida.");
+    }
+    return new GoogleGenAI({ apiKey });
+};
+
+const languageMap: { [key: string]: string } = {
+    'pt-BR': 'Português do Brasil',
+    'en-US': 'Inglês Americano',
+    'es-ES': 'Espanhol (Espanha)',
+    'fr-FR': 'Francês',
+    'de-DE': 'Alemão',
+};
+
+const getSystemInstruction = (languageCode: string) => {
+    const languageName = languageMap[languageCode] || 'Português do Brasil';
+    if (languageCode === 'en-US') {
+        return `You are an expert theologian and a deep scholar of the Holy Bible. Your mission is to create inspiring, accurate, and theologically sound content. Your responses should always be in American English, well-structured, and with language that honors the source material.`;
+    }
+    return `Você é um teólogo especialista e profundo conhecedor da Bíblia Sagrada. Sua missão é criar conteúdo inspirador, preciso e teologicamente sólido. Suas respostas devem ser sempre em ${languageName}, bem estruturadas e com uma linguagem que honre o material de origem.`;
+};
+
+
+async function generateWithGemini(apiKey: string, prompt: string, language: string, configOverrides: Record<string, any> = {}): Promise<string> {
+    try {
+        const ai = getAiClient(apiKey);
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: getSystemInstruction(language),
+                temperature: 0.75,
+                ...configOverrides
+            }
+        });
+        return response.text.trim();
+    } catch (error: any) {
+        console.error("Error generating text with Gemini:", error);
+        const errorMessage = error.toString();
+        if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+             throw new Error("Você excedeu sua cota de API. Por favor, aguarde um pouco antes de tentar novamente ou verifique seu plano.");
+        }
+        if (errorMessage.includes('API key not valid')) {
+            throw new Error("Sua chave de API não é válida. Por favor, verifique-a.");
+        }
+        throw new Error("Falha ao se comunicar com a API do Gemini para gerar texto.");
+    }
+}
+
+async function generateJsonWithGemini(apiKey: string, prompt: string, language: string, schema: any): Promise<string> {
+    try {
+        const ai = getAiClient(apiKey);
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: getSystemInstruction(language),
+                temperature: 0.75,
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            }
+        });
+        return response.text.trim();
+    } catch (error: any) {
+        console.error("Error generating JSON with Gemini:", error);
+        const errorMessage = error.toString();
+         if (errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+             throw new Error("Você excedeu sua cota de API. Por favor, aguarde um pouco antes de tentar novamente ou verifique seu plano.");
+        }
+        if (errorMessage.includes('API key not valid')) {
+            throw new Error("Sua chave de API não é válida. Por favor, verifique-a.");
+        }
+        throw new Error("Falha ao gerar dados estruturados com a API do Gemini.");
+    }
+}
+
+export async function enhanceStoryPrompt(params: GenerationParams, apiKey: string): Promise<string> {
+    const languageName = languageMap[params.language] || 'Português do Brasil';
+    const prompt = `Aja como um roteirista e teólogo criativo. Recebi a seguinte ideia para uma história bíblica: "${params.mainPrompt}".
+Aprimore esta ideia em um prompt mais rico e detalhado, sugerindo um arco de personagem, conflitos, detalhes de cenário e um clímax.
+O resultado deve ser um novo parágrafo único que sirva como um prompt aprimorado.
+Retorne APENAS o texto do prompt aprimorado, no idioma ${languageName}.`;
+    return generateWithGemini(apiKey, prompt, params.language);
+}
+
+
+export async function generateTitles(params: GenerationParams, apiKey: string, modification?: string): Promise<string[]> {
+    const languageName = languageMap[params.language] || 'Português do Brasil';
+    const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
+    let prompt = `Baseado na seguinte ideia: "${params.mainPrompt}", gere 5 sugestões de títulos cativantes para uma ${typeText}.`;
+    if (params.titlePrompt) prompt += ` Leve em consideração: "${params.titlePrompt}".`;
+    if (modification) prompt += ` Modifique com a seguinte instrução: "${modification}".`;
+    prompt += ` Gere os títulos no idioma ${languageName}. Responda com um array JSON de strings.`;
+    
+    const schema = {
+        type: Type.ARRAY,
+        items: { type: Type.STRING }
+    };
+    const responseJson = await generateJsonWithGemini(apiKey, prompt, params.language, schema);
+
+    try {
+        const titles = JSON.parse(responseJson);
+        return Array.isArray(titles) ? titles.slice(0, 5) : [];
+    } catch (e) {
+        console.error("Failed to parse titles JSON:", e, "Raw response:", responseJson);
+        return responseJson.split('\n').map(t => t.replace(/^- /, '').trim()).filter(Boolean).slice(0, 5);
+    }
+}
+
+export async function generateDescription(params: GenerationParams, apiKey: string, modification?: string): Promise<string> {
+    const languageName = languageMap[params.language] || 'Português do Brasil';
+    const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
+    let prompt = `Baseado na seguinte ideia: "${params.mainPrompt}", escreva uma descrição envolvente para uma ${typeText}.`;
+    if (params.descriptionPrompt) prompt += ` Leve em consideração: "${params.descriptionPrompt}".`;
+    if (modification) prompt += ` Modifique com a seguinte instrução: "${modification}".`;
+    prompt += ` A descrição deve ter cerca de 2-3 frases. Escreva a resposta no idioma ${languageName}. Retorne apenas o texto da descrição.`;
+    return generateWithGemini(apiKey, prompt, params.language);
+}
+
+export async function generateTags(params: GenerationParams, apiKey: string, modification?: string): Promise<string[]> {
+    const languageName = languageMap[params.language] || 'Português do Brasil';
+    const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
+    let prompt = `Para uma ${typeText} com o tema "${params.mainPrompt}", gere uma lista de 10 a 15 tags de SEO otimizadas.`;
+    if (modification) prompt += ` Modifique com a seguinte instrução: "${modification}".`;
+    prompt += ` As tags devem ser relevantes e no idioma ${languageName}. Responda com um array JSON de strings.`;
+    
+    const schema = {
+        type: Type.ARRAY,
+        items: { type: Type.STRING }
+    };
+    const responseJson = await generateJsonWithGemini(apiKey, prompt, params.language, schema);
+
+    try {
+        const tags = JSON.parse(responseJson);
+        return Array.isArray(tags) ? tags.filter(Boolean) : [];
+    } catch (e) {
+        console.error("Failed to parse tags JSON:", e, "Raw response:", responseJson);
+        return responseJson.split(',').map(tag => tag.trim()).filter(Boolean);
+    }
+}
+
+export async function generateThumbnailPrompt(params: GenerationParams, generatedContent: string, apiKey: string, modification?: string): Promise<string> {
+    const languageName = languageMap[params.language] || 'Português do Brasil';
+    const typeText = params.creationType === CreationType.Story ? 'história bíblica' : 'oração';
+    let prompt = `Crie um prompt detalhado, escrito inteiramente EM INGLÊS, para uma IA de geração de imagem. O objetivo é gerar uma thumbnail para uma ${typeText} sobre "${params.mainPrompt}". O conteúdo principal é: "${generatedContent.substring(0, 300)}...".\n\n`;
+    
+    prompt += `O prompt em INGLÊS deve incluir:\n`
+    prompt += `1. Descrição da cena, estilo artístico, iluminação e composição.\n`;
+    prompt += `2. Uma instrução específica para um TEXTO a ser sobreposto na imagem. Este texto deve ser escrito EM ${languageName}. O texto deve ser curto, impactante e despertar curiosidade. Exemplo de instrução: "Text overlay in ${languageName}: 'O texto de exemplo aqui'".\n`;
+
+    if (params.thumbnailPrompt) prompt += `\nConsidere a preferência do usuário para o estilo: "${params.thumbnailPrompt}".`;
+    if (modification) prompt += `\nModifique o prompt com a seguinte instrução: "${modification}".`;
+    
+    prompt += "\nRetorne apenas o texto do prompt final para a IA de imagem.";
+
+    return generateWithGemini(apiKey, prompt, 'en-US'); // The prompt itself is generated in English for consistency
+}
+
+export async function generateContent(params: GenerationParams, apiKey: string, modification?: string): Promise<string> {
+    const { creationType, mainPrompt, characterCount, language } = params;
+    const languageName = languageMap[language] || 'Português do Brasil';
+    
+    const prompt = `Sua tarefa tem quatro regras ABSOLUTAS e OBRIGATÓRIAS.
+
+REGRA 0 (IDIOMA): A resposta DEVE ser escrita inteiramente em ${languageName}.
+
+REGRA 1 (ESTRUTURA): O texto deve ter uma estrutura clara de início, meio e fim.
+- Para uma história: apresentação, desenvolvimento/conflito e resolução.
+- Para uma oração: introdução, corpo da petição e conclusão.
+
+REGRA 2 (CONTAGEM DE CARACTERES): O resultado final DEVE ter entre ${characterCount - 100} e ${characterCount + 100} caracteres. Esta é uma regra crítica. Sacrifique detalhes se necessário para CUMPRIR esta regra.
+
+REGRA 3 (FORMATO DA RESPOSTA): A resposta deve conter APENAS o texto da ${creationType === CreationType.Story ? 'história' : 'oração'}. Não inclua nenhum texto extra.
+
+Após confirmar que entendeu e irá seguir estas quatro regras, crie uma ${creationType === CreationType.Story ? 'história bíblica' : 'oração'} com base no tema: "${mainPrompt}".
+${modification ? `\n\nInstrução de modificação: "${modification}". Aplique-a, mas SEMPRE respeitando as REGRAS 0, 1, 2 e 3.` : ''}
+Formate com parágrafos.`;
+    
+    let generatedText = await generateWithGemini(apiKey, prompt, language, { temperature: 0.4 });
+
+    if (generatedText.length > characterCount + 100) {
+        const hardLimit = characterCount + 100;
+        let cutIndex = generatedText.lastIndexOf('.', hardLimit);
+        if (cutIndex === -1 || cutIndex < hardLimit - 100) {
+            cutIndex = generatedText.lastIndexOf(' ', hardLimit);
+        }
+        if (cutIndex === -1) {
+            cutIndex = hardLimit;
+        }
+        generatedText = generatedText.substring(0, cutIndex).trim();
+    }
+
+    return generatedText;
+}
+
+export async function generateCta(params: GenerationParams, apiKey: string, modification?: string): Promise<string> {
+    const languageName = languageMap[params.language] || 'Português do Brasil';
+    const typeText = params.creationType === CreationType.Story ? 'história' : 'oração';
+    let prompt = `Baseado no tema "${params.mainPrompt}" para uma ${typeText}, crie uma "call to action" (CTA) concisa para o final de um vídeo no YouTube.`;
+    if (modification) {
+        prompt += ` Modifique com a instrução: "${modification}".`;
+    }
+    prompt += ` A CTA deve incentivar o espectador a se inscrever, curtir e comentar. Seja criativo. Escreva a resposta no idioma ${languageName}. Retorne apenas o texto da CTA.`;
+    return generateWithGemini(apiKey, prompt, params.language);
+}
